@@ -14,20 +14,22 @@ What you will need
 
 1. A Raspberry Pi board (http://www.raspberrypi.org/)
 2. Raspbian installed on your Raspberry Pi (http://raspbian.org/)
-3. A 5-channel remote control for shutters
-4. 
+3. A 4-channel remote control for shutters
+
+
 
 ----------------------------------------------
-Circuit
+Wiring Diagram
 ----------------------------------------------
 
-TBD
+Connecting a 4-channel remote control to your raspberrypi:
+
+![alt tag](https://raw.github.com/bendr0id/shutter-control/master/wiringdiagram-4chan.png)
 
 ----------------------------------------------
 Installation
 ----------------------------------------------
 
-TBS
 
 ----------------------------------------------
 Usage
