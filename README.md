@@ -24,7 +24,7 @@ Wiring Diagram
 
 Connecting a 4-channel remote control to your raspberrypi:
 
-![alt tag](https://raw.github.com/bendr0id/shutter-control/master/wiringdiagram-4chan.png)
+![alt tag](https://raw.githubusercontent.com/bendr0id/shutter-control/master/wiring_diagram_4_channel.png)
 
 ----------------------------------------------
 Installation
