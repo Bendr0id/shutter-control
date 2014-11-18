@@ -7,14 +7,15 @@ It lets you connect a 4-channel (optional 8-Channel) remote control for shutters
 
 The project is using the library Pi4J (http://pi4j.com/)
 
-
 ----------------------------------------------
 Hardware requirements
 ----------------------------------------------
 
-1. A Raspberry Pi board (http://www.raspberrypi.org/)
-2. Raspbian installed on your Raspberry Pi (http://raspbian.org/)
-3. 4-channel remote control for shutters
+Raspberry Pi board (http://www.raspberrypi.org/)
+
+Raspbian installed on your Raspberry Pi (http://raspbian.org/)
+
+A 4-channel remote control for shutters
 
 ----------------------------------------------
 Software requirements
