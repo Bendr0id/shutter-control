@@ -1,20 +1,34 @@
 package com.vidi.shuttercontrol;
 
-import com.pi4j.io.gpio.*;
+import com.pi4j.io.gpio.GpioController;
+import com.pi4j.io.gpio.GpioFactory;
+import com.pi4j.io.gpio.GpioPinDigitalInput;
+import com.pi4j.io.gpio.GpioPinDigitalOutput;
+import com.pi4j.io.gpio.Pin;
+import com.pi4j.io.gpio.PinPullResistance;
+import com.pi4j.io.gpio.PinState;
+import com.pi4j.io.gpio.RaspiPin;
 
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ShutterControl
 {
-    private static String HEADER = "ShutterControl 1.0";
-    private static String USAGE = "[-h] -s <shutter> -o <operation>";
+    private final static String HEADER = "ShutterControl 1.0";
+    private final static String USAGE = "[-h] -s <shutter> -o <operation>";
 
-    private static String OPERATION_SELECT = "SELECT";
-    private static String OPERATION_UP = "UP";
-    private static String OPERATION_DOWN = "DOWN";
-    private static String OPERATION_STOP = "STOP";
+    private final static String OPERATION_SELECT = "SELECT";
+    private final static String OPERATION_UP = "UP";
+    private final static String OPERATION_DOWN = "DOWN";
+    private final static String OPERATION_STOP = "STOP";
 
     private int shutter;
     private String operation;
@@ -23,41 +37,46 @@ public class ShutterControl
     private Map<String, GpioPinDigitalOutput> buttons;
     private Map<Integer, GpioPinDigitalInput> leds;
 
-    public ShutterControl(String[] args) throws InterruptedException
-    {
-        parseCommandLine(args);
-
-        System.out.println("Start.");
-
-        gpio = GpioFactory.getInstance();
-
-        buttons = new HashMap<String, GpioPinDigitalOutput>();
-
-        addButton(RaspiPin.GPIO_00, OPERATION_SELECT);
-        addButton(RaspiPin.GPIO_01, OPERATION_UP);
-        addButton(RaspiPin.GPIO_02, OPERATION_DOWN);
-        addButton(RaspiPin.GPIO_03, OPERATION_STOP);
-
-        leds = new HashMap<Integer, GpioPinDigitalInput>();
-        addLed(RaspiPin.GPIO_04, 1);
-        addLed(RaspiPin.GPIO_05, 2);
-        addLed(RaspiPin.GPIO_06, 3);
-        addLed(RaspiPin.GPIO_07, 4);
-
-        selectShutter(shutter);
-        pushButton(buttons.get(operation));
-
-        System.out.println("End.");
-
-        gpio.shutdown();
-    }
-
     public static void main(String[] args) throws InterruptedException
     {
         new ShutterControl(args);
     }
 
-    private void addButton(Pin pin, String operation)
+    public ShutterControl(String[] args) throws InterruptedException
+    {
+        parseCommandLine(args);
+
+        gpio = GpioFactory.getInstance();
+
+        defineAllButtons();
+        defineAllLeds();
+
+        selectShutter(shutter);
+
+        pushButton(buttons.get(operation));
+
+        gpio.shutdown();
+    }
+
+    private void defineAllLeds()
+    {
+        leds = new HashMap<Integer, GpioPinDigitalInput>();
+        defineLed(RaspiPin.GPIO_04, 1);
+        defineLed(RaspiPin.GPIO_05, 2);
+        defineLed(RaspiPin.GPIO_06, 3);
+        defineLed(RaspiPin.GPIO_07, 4);
+    }
+
+    private void defineAllButtons()
+    {
+        buttons = new HashMap<String, GpioPinDigitalOutput>();
+        defineButton(RaspiPin.GPIO_00, OPERATION_SELECT);
+        defineButton(RaspiPin.GPIO_01, OPERATION_UP);
+        defineButton(RaspiPin.GPIO_02, OPERATION_DOWN);
+        defineButton(RaspiPin.GPIO_03, OPERATION_STOP);
+    }
+
+    private void defineButton(Pin pin, String operation)
     {
         GpioPinDigitalOutput button = gpio.provisionDigitalOutputPin(pin, operation, PinState.LOW);
         button.setShutdownOptions(true, PinState.LOW);
@@ -65,7 +84,7 @@ public class ShutterControl
         buttons.put(operation, button);
     }
 
-    private void addLed(Pin pin, int number)
+    private void defineLed(Pin pin, int number)
     {
         leds.put(number, gpio.provisionDigitalInputPin(pin, "LED" + number, PinPullResistance.PULL_DOWN));
     }
@@ -74,7 +93,7 @@ public class ShutterControl
     {
         System.out.println("selectShutter(" + shutter + ")");
 
-        while (!leds.get(shutter).isHigh() || allHigh(leds.values()))
+        while (!isLedOn(shutter) || isEveryLedOn(leds.values()))
         {
             pushButton(buttons.get(OPERATION_SELECT));
         }
@@ -88,7 +107,12 @@ public class ShutterControl
         Thread.sleep(1000);
     }
 
-    private boolean allHigh(Collection<GpioPinDigitalInput> leds)
+    private boolean isLedOn(int index)
+    {
+        return leds.get(index).isHigh();
+    }
+
+    private boolean isEveryLedOn(Collection<GpioPinDigitalInput> leds)
     {
         boolean state = true;
 
@@ -118,17 +142,8 @@ public class ShutterControl
             shutter = Integer.valueOf(commandLine.getOptionValue('s'));
             operation = commandLine.getOptionValue('o').toUpperCase();
 
-            if (shutter <= 0 || shutter > 4)
-            {
-                throw new Exception("Invalid shutter number. possible is 1-4.");
-            }
-
-            if (!operation.equals(OPERATION_UP) &&
-                !operation.equals(OPERATION_DOWN) &&
-                !operation.equals(OPERATION_STOP))
-            {
-                throw new Exception("Invalid operation. possible is up/down/stop.");
-            }
+            validateShutterParameter();
+            validateOperationParameter();
         }
         catch (Exception e)
         {
@@ -137,6 +152,24 @@ public class ShutterControl
 
             printUsage(options);
             System.exit(1);
+        }
+    }
+
+    private void validateShutterParameter() throws Exception
+    {
+        if (shutter <= 0 || shutter > 4)
+        {
+            throw new Exception("Invalid shutter number. possible is 1-4.");
+        }
+    }
+
+    private void validateOperationParameter() throws Exception
+    {
+        if (!operation.equals(OPERATION_UP) &&
+            !operation.equals(OPERATION_DOWN) &&
+            !operation.equals(OPERATION_STOP))
+        {
+            throw new Exception("Invalid operation. possible is up/down/stop.");
         }
     }
 
